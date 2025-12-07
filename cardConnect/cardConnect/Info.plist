@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>GeminiAPIKey</key>
+	<string>AIzaSyBvIbInC_P8kwmOiqnL9-aG-k_igrhNWc4</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access to scan business cards.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.869406017626-sp1fpl03vbn6qbss2dffka7lckj01iba</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
