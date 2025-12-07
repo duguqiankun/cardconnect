@@ -1,0 +1,4 @@
+// Copy this file to Config.xcconfig and add your API key
+// DO NOT commit Config.xcconfig to git!
+
+GEMINI_API_KEY = YOUR_API_KEY_HERE
