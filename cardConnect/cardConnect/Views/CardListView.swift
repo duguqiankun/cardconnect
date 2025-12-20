@@ -45,12 +45,11 @@ struct CardListView: View {
                 List {
                     // Header Section (Chart or Empty State)
                     Section {
-                        if !cards.isEmpty {
+                        if !industryData.isEmpty {
                             Chart(industryData, id: \.industry) { item in
                                 SectorMark(
                                     angle: .value("Count", item.count),
-                                    innerRadius: .ratio(0.5),
-                                    angularInset: 1.5
+                                    innerRadius: .ratio(0.5)
                                 )
                                 .foregroundStyle(by: .value("Industry", item.industry))
                             }
@@ -62,8 +61,6 @@ struct CardListView: View {
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding()
                         }
-                        
-                        // DEBUG INFO - REMOVED
                     }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
@@ -116,12 +113,12 @@ struct CardListView: View {
                         }
                     } label: {
                         Image(systemName: "camera.fill")
-                            .font(.title)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.blue)
-                            .clipShape(Circle())
-                            .shadow(radius: 4)
+                        .font(.title)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.blue)
+                        .clipShape(Circle())
+                        .shadow(radius: 4)
                     }
                     .padding(.bottom, 20)
                 }
@@ -277,6 +274,7 @@ struct CardListView: View {
                             title: draft.title ?? "",
                             phone: draft.phone ?? "",
                             email: draft.email ?? "",
+                            website: draft.website ?? "", // Use draft info
                             companyName: company,
                             department: draft.department ?? "",
                             address: draft.address ?? "",

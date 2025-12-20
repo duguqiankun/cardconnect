@@ -1,5 +1,4 @@
 import SwiftUI
-import StoreKit
 
 struct SubscriptionView: View {
     @Environment(SubscriptionService.self) private var subscriptionService
@@ -43,53 +42,22 @@ struct SubscriptionView: View {
                     .cornerRadius(16)
                     .padding(.horizontal)
                     
-                    // Products
+                    // Action Button
                     if subscriptionService.isLoading {
                         ProgressView()
-                    } else if let product = subscriptionService.products.first {
-                        VStack(spacing: 16) {
-                            // Free trial banner
-                            if let subscription = product.subscription,
-                               let introOffer = subscription.introductoryOffer {
-                                HStack {
-                                    Image(systemName: "gift.fill")
-                                        .foregroundColor(.green)
-                                    Text("1 Month Free Trial")
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.green)
+                            .padding()
+                    } else {
+                        Button(action: {
+                            Task {
+                                await subscriptionService.purchase()
+                                if subscriptionService.hasActiveSubscription {
+                                    dismiss()
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.green.opacity(0.15))
-                                .cornerRadius(20)
                             }
-                            
-                            // Subscribe button
-                            Button(action: {
-                                Task {
-                                    await subscriptionService.purchase(product)
-                                    if subscriptionService.hasActiveSubscription {
-                                        dismiss()
-                                    }
-                                }
-                            }) {
-                                VStack(spacing: 6) {
-                                    if let subscription = product.subscription,
-                                       let introOffer = subscription.introductoryOffer {
-                                        Text("Start Free Trial")
-                                            .font(.headline)
-                                            .fontWeight(.bold)
-                                        Text("Then \(product.displayPrice)/month")
-                                            .font(.subheadline)
-                                            .opacity(0.9)
-                                    } else {
-                                        Text("Subscribe for \(product.displayPrice)/month")
-                                            .fontWeight(.semibold)
-                                    }
-                                    Text("Cancel anytime")
-                                        .font(.caption)
-                                        .opacity(0.7)
-                                }
+                        }) {
+                            Text("Unlock Pro (Free)")
+                                .font(.headline)
+                                .fontWeight(.bold)
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(
@@ -101,19 +69,8 @@ struct SubscriptionView: View {
                                 )
                                 .foregroundColor(.white)
                                 .cornerRadius(16)
-                            }
-                            .padding(.horizontal)
-                            
-                            // Trial terms
-                            Text("After your free trial, you'll be charged \(product.displayPrice) per month. Cancel anytime in Settings.")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
                         }
-                    } else {
-                        Text("No products available")
-                            .foregroundColor(.secondary)
+                        .padding(.horizontal)
                     }
                     
                     // Restore

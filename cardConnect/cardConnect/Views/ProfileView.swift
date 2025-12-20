@@ -3,7 +3,13 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(AuthService.self) private var authService
     @Environment(SubscriptionService.self) private var subscriptionService
+    @Environment(CardSyncService.self) private var cardSyncService
+    @Environment(\.modelContext) private var modelContext
     @State private var showSubscription = false
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
+
+
     
     var body: some View {
         NavigationStack {
@@ -70,7 +76,7 @@ struct ProfileView: View {
                             HStack {
                                 Image(systemName: "star.fill")
                                     .foregroundColor(.yellow)
-                                Text("Upgrade to Pro")
+                                    Text("Upgrade to Pro")
                                     .fontWeight(.medium)
                             }
                         }
@@ -88,10 +94,64 @@ struct ProfileView: View {
                         }
                     }
                 }
+                
+                // Danger Zone
+                Section {
+                    Button(role: .destructive, action: {
+                        showDeleteConfirmation = true
+                    }) {
+                        if isDeleting {
+                            HStack {
+                                Text("Deleting Account...")
+                                Spacer()
+                                ProgressView()
+                            }
+                        } else {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Delete Account")
+                            }
+                        }
+                    }
+                    .disabled(isDeleting)
+                }
             }
             .navigationTitle("Profile")
             .sheet(isPresented: $showSubscription) {
                 SubscriptionView()
+            }
+            .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    deleteAccount()
+                }
+            } message: {
+                Text("Are you sure you want to delete your account? This action is permanent and will delete all your synced business cards. This cannot be undone.")
+            }
+
+        }
+    }
+    
+    private func deleteAccount() {
+        isDeleting = true
+        
+        Task {
+            do {
+                // 1. Delete data from Firestore
+                try await cardSyncService.deleteAllUserData()
+                
+                // 2. Delete Auth Account
+                try await authService.deleteAccount()
+                
+                // 3. Clear local data (SwiftData)
+                try? modelContext.delete(model: BusinessCard.self)
+                
+                // 4. Reset UI state (handled by auth state listener, but good to be explicit)
+                isDeleting = false
+            } catch {
+                print("Error deleting account: \(error)")
+                isDeleting = false
+                // Ideally show an error alert here
             }
         }
     }
@@ -100,5 +160,6 @@ struct ProfileView: View {
 #Preview {
     ProfileView()
         .environment(AuthService())
+
         .environment(SubscriptionService())
 }

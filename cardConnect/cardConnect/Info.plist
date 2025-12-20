@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>GeminiAPIKey</key>
-	<string>$(GEMINI_API_KEY)</string>
+	<string>AIzaSyAwzq-4bM7zT6o9PjYfwNlLiwBmbcbXt5A</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We need camera access to scan business cards.</string>
 	<key>CFBundleURLTypes</key>

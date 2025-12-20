@@ -21,6 +21,7 @@ class CardSyncService {
         let title: String
         let phone: String
         let email: String
+        let website: String?
         let companyName: String
         let department: String
         let address: String
@@ -101,6 +102,7 @@ class CardSyncService {
             title: card.title,
             phone: card.phone,
             email: card.email,
+            website: card.website,
             companyName: card.companyName,
             department: card.department,
             address: card.address,
@@ -127,6 +129,25 @@ class CardSyncService {
         print("Card deleted from Firestore: \(cardId)")
     }
     
+    // MARK: - Delete All User Data
+    
+    func deleteAllUserData() async throws {
+        guard let collection = cardsCollection() else {
+            throw SyncError.notAuthenticated
+        }
+        
+        // Fetch all documents
+        let snapshot = try await collection.getDocuments()
+        
+        // Delete each document
+        // Note: For large collections, this should be batched, but for this app, simple iteration is fine
+        for document in snapshot.documents {
+            try await document.reference.delete()
+        }
+        
+        print("All user data deleted from Firestore")
+    }
+    
     // MARK: - Fetch All Cards from Firestore
     
     func fetchAllCards() async throws -> [BusinessCard] {
@@ -146,6 +167,7 @@ class CardSyncService {
                     title: firestoreCard.title,
                     phone: firestoreCard.phone,
                     email: firestoreCard.email,
+                    website: firestoreCard.website ?? "", // Handle optional legacy data
                     companyName: firestoreCard.companyName,
                     department: firestoreCard.department,
                     address: firestoreCard.address,

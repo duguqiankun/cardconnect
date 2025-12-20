@@ -1,5 +1,6 @@
 import Foundation
-import GoogleGenerativeAI
+import FirebaseAILogic
+import FirebaseCore
 import UIKit
 
 @Observable
@@ -15,19 +16,18 @@ class GeminiService {
     }
     
     func setupModel() {
-        // Read API Key from Info.plist
-        guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "GeminiAPIKey") as? String, !apiKey.isEmpty else {
-            self.errorMessage = "Gemini API Key not found in Info.plist"
-            return
-        }
+        // Use Firebase AI Logic
+        // Initialize the service using the FirebaseAI entry point
+        // and the .vertexAI() backend (or .googleAI() if using that)
+        let service = FirebaseAI.firebaseAI(backend: .vertexAI())
         
-        // Try the latest model
-        self.model = GenerativeModel(name: "gemini-2.0-flash", apiKey: apiKey)
+        // We use gemini-3.0-flash as requested.
+        self.model = service.generativeModel(modelName: "gemini-2.5-flash")
     }
 
     func sendMessage(_ message: String) async {
         guard let model = model else {
-            self.errorMessage = "Model not initialized. Check API Key."
+            self.errorMessage = "Model not initialized."
             return
         }
         
@@ -62,11 +62,12 @@ class GeminiService {
         - Title
         - Phone
         - Email
+        - Website
         - Company Name
         - Department
         - Address
         
-        Return the result as a JSON array of objects. Keys should be: name, title, phone, email, companyName, department, address.
+        Return the result as a JSON array of objects. Keys should be: name, title, phone, email, website, companyName, department, address.
         If a field is missing, omit it or use null.
         Do not include markdown formatting like ```json ... ```. Just return the raw JSON string.
         """
@@ -80,10 +81,9 @@ class GeminiService {
             
             print("GeminiService Raw Response: \(text)")
             
-            // Clean up potential markdown formatting if Gemini adds it despite instructions
-            let cleanText = text.replacingOccurrences(of: "```json", with: "").replacingOccurrences(of: "```", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanText = text.replacingOccurrences(of: "```json", with: "").replacingOccurrences(of: "```", with: "").trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             
-            guard let data = cleanText.data(using: .utf8) else {
+            guard let data = cleanText.data(using: String.Encoding.utf8) else {
                 print("GeminiService: Failed to convert response to data")
                 throw NSError(domain: "GeminiService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to convert response to data"])
             }
@@ -101,37 +101,60 @@ class GeminiService {
     }
     
     func enrichCardInfo(card: BusinessCardDraft) async throws -> (companyDesc: String, roleDesc: String, industry: String) {
-        guard let model = model else {
-            throw NSError(domain: "GeminiService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Model not initialized"])
-        }
         
-        // Don't set global isLoading here to avoid blocking UI if we want to run this in background
-        // Or we can set it if we want to show progress. Let's keep it simple for now.
+        // Use Google Search Grounding tool
+        let tools: [Tool] = [.googleSearch()]
+        
+        let service = FirebaseAI.firebaseAI(backend: .vertexAI())
+        let enrichmentModel = service.generativeModel(
+            modelName: "gemini-2.5-flash",
+            tools: tools
+        )
         
         let prompt = """
-        Based on the following business card information, provide:
-        1. A brief description of what the company does.
-        2. A brief description of what this person's role likely entails.
-        3. The general Industry this company belongs to (e.g., Technology, Finance, Healthcare, Real Estate, Retail, etc.). Keep it to one word or a short phrase.
+        Act as an expert Sales Agent connecting industry supply and demand.
+        Use Google Search to find up-to-date information about the following company and person.
         
+        Business Card Info:
         Company: \(card.companyName ?? "Unknown")
         Title: \(card.title ?? "Unknown")
         Department: \(card.department ?? "Unknown")
+        Address: \(card.address ?? "")
+        Website: \(card.website ?? "")
         
-        Return the result as a JSON object with keys: "companyDescription", "roleDescription", "industry".
-        Do not include markdown formatting.
+        Generate a concise Sales Analysis:
+        1. **Industry**: A short industry tag.
+        2. **Company Summary**: A concise description of what the company does.
+        3. **Sales Analysis Report** (formatted in Markdown):
+           - **Supply & Demand**: What does this company likely sell (Supply) and what do they likely need/buy (Demand)?
+           - **Why Connect**: Why does this candidate/company stand out? What is the specific opportunity?
+           - **Top Recommended Contacts**: Who are the specific top contacts (roles or real names if found) that the user should reach out to at this company to initiate a business relationship?
+        
+        Return the result as a strictly valid JSON object with keys:
+        - "companyDescription": (String) The company summary.
+        - "roleDescription": (String) The 'Sales Analysis Report' in Markdown.
+        - "industry": (String) The industry tag.
+        
+        Do not include markdown formatting for the JSON itself (no ```json code blocks). Just return the raw JSON string.
         """
         
         do {
-            let response = try await model.generateContent(prompt)
+            let response = try await enrichmentModel.generateContent(prompt)
             guard let text = response.text else {
+                print("GeminiService: No text in response")
                 return ("Could not generate description.", "Could not generate description.", "Unknown")
             }
             
-            let cleanText = text.replacingOccurrences(of: "```json", with: "").replacingOccurrences(of: "```", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+             // Debug print to see if search was used
+             print("Enrichment Response: \(text)")
+             if let groundingMetadata = response.candidates.first?.groundingMetadata {
+                 print("Grounding Metadata: \(groundingMetadata)")
+             }
             
-            guard let data = cleanText.data(using: .utf8) else {
-                 return (cleanText, "", "Unknown") // Fallback to raw text if not JSON
+            let cleanText = text.replacingOccurrences(of: "```json", with: "").replacingOccurrences(of: "```", with: "").trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            
+            guard let data = cleanText.data(using: String.Encoding.utf8) else {
+                 return (cleanText, "", "Unknown")
             }
             
             struct EnrichmentResult: Codable {

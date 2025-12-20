@@ -93,6 +93,24 @@ class AuthService: NSObject {
         }
     }
     
+    // MARK: - Delete Account
+    
+    func deleteAccount() async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw NSError(domain: "AuthService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No user logged in"])
+        }
+        
+        do {
+            try await user.delete()
+            // If successful, sign out locally as well to clean up state
+            signOut()
+        } catch {
+            // If the error is "requires recent login", we should pass it up
+            self.errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+    
     // MARK: - Helper Functions
     
     private func randomNonceString(length: Int = 32) -> String {
