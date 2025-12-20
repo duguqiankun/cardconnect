@@ -2,3 +2,7 @@ Config.xcconfig
 xcuserdata/
 *.xcuserstate
 .DS_Store
+GoogleService-Info.plist
+cardConnect/Info.plist
+
+
