@@ -17,11 +17,9 @@ class GeminiService {
     
     func setupModel() {
         // Use Firebase AI Logic
-        // Initialize the service using the FirebaseAI entry point
-        // and the .vertexAI() backend (or .googleAI() if using that)
         let service = FirebaseAI.firebaseAI(backend: .vertexAI())
         
-        // We use gemini-3.0-flash as requested.
+        // General text model
         self.model = service.generativeModel(modelName: "gemini-2.5-flash")
     }
 
@@ -31,12 +29,27 @@ class GeminiService {
             return
         }
         
+        await generateResponse(using: model, prompt: message)
+    }
+    
+    func sendAnalysisMessage(_ message: String) async {
+        let service = FirebaseAI.firebaseAI(backend: .vertexAI())
+        // Model with Google Search for Analysis
+        let analysisModel = service.generativeModel(
+            modelName: "gemini-2.5-flash",
+            tools: [.googleSearch()]
+        )
+        
+        await generateResponse(using: analysisModel, prompt: message)
+    }
+
+    private func generateResponse(using model: GenerativeModel, prompt: String) async {
         self.isLoading = true
         self.errorMessage = nil
         self.responseText = ""
         
         do {
-            let response = try await model.generateContent(message)
+            let response = try await model.generateContent(prompt)
             if let text = response.text {
                 self.responseText = text
             }
@@ -112,9 +125,6 @@ class GeminiService {
         )
         
         let prompt = """
-        Act as an expert Sales Agent connecting industry supply and demand.
-        Use Google Search to find up-to-date information about the following company and person.
-        
         Business Card Info:
         Company: \(card.companyName ?? "Unknown")
         Title: \(card.title ?? "Unknown")
@@ -122,20 +132,17 @@ class GeminiService {
         Address: \(card.address ?? "")
         Website: \(card.website ?? "")
         
-        Generate a concise Sales Analysis:
-        1. **Industry**: A short industry tag.
-        2. **Company Summary**: A concise description of what the company does.
-        3. **Sales Analysis Report** (formatted in Markdown):
-           - **Supply & Demand**: What does this company likely sell (Supply) and what do they likely need/buy (Demand)?
-           - **Why Connect**: Why does this candidate/company stand out? What is the specific opportunity?
-           - **Top Recommended Contacts**: Who are the specific top contacts (roles or real names if found) that the user should reach out to at this company to initiate a business relationship?
+        Provide a simple and accurate enrichment:
+        1. **Company Description**: A brief, factual summary of what the company does.
+        2. **Industry**: A specific industry tag.
+        3. **Job Context**: A one-sentence explanation of what this role typically involves in this industry.
         
-        Return the result as a strictly valid JSON object with keys:
-        - "companyDescription": (String) The company summary.
-        - "roleDescription": (String) The 'Sales Analysis Report' in Markdown.
-        - "industry": (String) The industry tag.
-        
-        Do not include markdown formatting for the JSON itself (no ```json code blocks). Just return the raw JSON string.
+        Return a strictly valid JSON object:
+        {
+          "companyDescription": "...",
+          "roleDescription": "...",
+          "industry": "..."
+        }
         """
         
         do {

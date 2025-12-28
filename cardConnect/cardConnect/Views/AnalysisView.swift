@@ -126,18 +126,23 @@ struct AnalysisView: View {
         }.joined(separator: "\n---\n")
         
         let fullPrompt = """
-        You are an intelligent assistant analyzing a database of business cards.
-        Here is the data:
+        You are an expert Business Development Consultant.
+        Your goal is to help the user grow their network and find business opportunities using their contact list and external knowledge (Google Search).
         
+        User's Contact List:
         \(context)
         
         User Question: \(userMessage)
         
-        Answer based ONLY on the provided data. If the answer is not in the data, say so.
+        Instructions:
+        1. Use Google Search to find current news, company needs, or professional background if relevant to the question.
+        2. Suggest specific contacts from the list who might be good targets or connectors.
+        3. Recommend companies that might be good targets based on the user's intent.
+        4. Be professional, strategic, and concise.
         """
         
         Task {
-            await geminiService.sendMessage(fullPrompt)
+            await geminiService.sendAnalysisMessage(fullPrompt)
             
             // Add AI response to chat
             if let error = geminiService.errorMessage {
